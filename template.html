@@ -1,0 +1,517 @@
+
+
+<script type="text/template" id="plugin">
+
+<style>
+
+	.ncp-plugin {
+		-moz-user-select: none;
+		-webkit-user-select: none;
+		-ms-user-select: none;
+		user-select:none;
+	}
+
+	/* Checkboxes */
+
+	.ncp-plugin input[type=radio]{
+	  position: absolute;
+	  visibility: hidden;
+	}
+
+	.ncp-plugin .check-group {
+		position: relative;
+		display: block;
+	    width: 38px;
+	    height: 20px;
+	    text-align: left;
+	}
+	
+	.ncp-plugin .storm-buttons-container label {
+	  position: relative;
+	  display: block;
+	  width: 163px;
+	  padding-top: 1px;
+	  padding-left: 30px;
+	  color: #333333;
+	  font-size: 16px;
+	  cursor: pointer;
+	  -webkit-transition: all 0.25s linear;
+	  transition: all 0.25s linear;
+	  z-index: 100;
+	}
+
+	.ncp-plugin .storm-buttons-container .radio-padding {
+		margin-top: 10px;
+	}
+
+	.ncp-plugin .storm-buttons-container .check-group.annual {
+		margin-top: 6px;
+	}
+
+	.ncp-plugin .storm-buttons-container .check-group.annual label {
+		width: 140px;
+	}
+
+	.ncp-plugin .check-group:hover label {
+		color: #306692;
+	}
+
+	.ncp-plugin .radio-select{
+	  position: absolute;
+	  display: block;
+	  top: 2px;
+	  left: 14px;
+	  border: 2px solid #306692;
+	  border-radius: 100%;
+	  height: 12px;
+	  width: 12px;
+	  z-index: 5;
+	  transition: border .25s linear;
+	  -webkit-transition: border .25s linear;
+	}
+
+	.ncp-plugin .storm-buttons-container .annual .radio-select {
+		top: -2px;
+	}
+
+	.ncp-plugin .radio-select::before {
+	  display: block;
+	  position: absolute;
+	  left: 1px;
+	  top: 1px;
+	  content: '';
+	  border-radius: 100%;
+	  height: 6px;
+	  width: 6px;
+	  margin: auto;
+	  transition: background 0.25s linear;
+	  -webkit-transition: background 0.25s linear;
+	}
+
+	.ncp-plugin input[type=radio]:checked ~ .radio-select::before{
+	  background:#306692;
+	}
+
+	.ncp-plugin input[type=radio]:checked ~ .check {
+	  border: 1px solid #306692;
+	}
+
+	.ncp-plugin input[type=radio]:checked ~ label{
+	  color: #306692;
+	}
+
+	/* End Checkboxes */
+
+	.ncp-plugin .clearfix {
+		overflow: auto;
+  		zoom: 1;
+	}
+
+	.ncp-plugin .title {
+	    margin: 6px 3px;
+		font-weight: bold;
+	    font-size: 22px;
+	    text-align: center;
+	}
+
+	.ncp-plugin .main-message {
+		margin: 4px;
+		font-size: 16px;
+	}
+
+	.ncp-plugin .controls-container {
+		padding: 10px 8px;
+		background-color: #f3f4f3;
+	}
+
+	.ncp-plugin .storm-buttons-container {
+		float: left;
+		width: 175px;
+	}
+
+	.ncp-plugin .storm-buttons-container .control-title,
+	.ncp-plugin .region-select-container .control-title {
+    	display: inline-block;
+		margin-bottom: 6px;
+    	font-weight: bold;
+	}
+
+	.ncp-plugin .region-select-container {
+		float: right;
+		width: 155px;
+	}
+
+	.ncp-plugin .info-tooltip {
+		color: #226491;
+		font-size: 16px;
+		vertical-align: middle;
+		background-color: #fff;
+		z-index: 101;
+	}
+
+	.ncp-plugin .stat .info-tooltip {
+		padding-left: 10px;
+		margin-top: -4px;
+		background-color:  #fff;
+		z-index: 101;
+	}
+
+	.ncp-plugin .styled-select {
+		position: relative;
+		width: 150px;
+		height: 36px;
+		overflow: hidden;
+		border: 2px solid #aaaaaa;
+		border-radius: 4px;
+		background-color: #fff;
+		cursor: pointer;
+	}
+
+	.ncp-plugin .styled-select::after {
+		display: block;
+		position: absolute;
+		right: 5px;
+    	top: 8px;
+		content: '\f078';
+		color: #999;
+		font-family: FontAwesome;
+		pointer-events: none;
+	}
+
+	.ncp-plugin .styled-select select {
+		background: transparent;
+		width: 168px;
+		padding: 5px;
+		font-size: 16px;
+		line-height: 1;
+		border: 0;
+		border-radius: 0;
+		color: #333333;
+		height: 32px;
+		-moz-appearance: none;
+		-webkit-appearance: none;
+		appearance: none;
+		cursor: pointer;
+	}
+
+	.ncp-plugin .styled-select select optgroup,
+	.ncp-plugin .styled-select select option {
+
+	}
+
+	.ncp-plugin .download-summary {
+		display: block;
+		margin-top: 12px;
+	    margin-left: 1px;
+	    margin-right: 6px;
+	    margin-bottom: 6px;
+	    color: #fff !important;
+	    cursor: pointer;
+	    border: 1px solid #226491;
+	    border-radius: 4px;
+	    padding: 4px;
+	    background-color: #226491;
+	    text-align: center;
+	    box-shadow: 2px 2px 5px 1px rgba(34,100,145, 0.2);
+	    transition: box-shadow 0.2s;
+	    font-size: 16px;
+    }
+
+    .ncp-plugin .download-summary:active {
+    	color: #fff;
+		-webkit-transform: scale(0.9) translateY(4px);
+		-moz-transform: scale(0.9) translateY(4px);
+		-ms-transform: scale(0.9) translateY(4px);
+		-o-transform: scale(0.9) translateY(4px);
+		transform: scale(0.9) translateY(4px);
+		background: darken(#226491, 5%);
+    }
+
+	.ncp-plugin .a:visited {
+		color: #fff !important;
+		outline: none;
+	}
+
+	.ncp-plugin .download-summary:hover {
+		color: #fff;
+		background: darken(#226491, 5%);
+		-webkit-transition: all 0.05s ease;
+		-moz-transition: all 0.05s ease;
+		-ms-transition: all 0.05s ease;
+		-o-transition: all 0.05s ease;
+		transition: all 0.05s ease;
+	}
+    .ncp-plugin .stats-description {
+    	padding: 8px;
+		font-size: 16px;
+    }
+
+	.ncp-plugin .stats-container {
+		width: 100%;
+		display: table;
+	}
+
+	.ncp-plugin .stat {
+		display: table-row;
+		height: 50px;
+	}
+
+	.ncp-plugin .stat.active .description,
+	.ncp-plugin .stat.active .number {
+		color: #226491;
+	}
+
+	.ncp-plugin .stat .number {
+		display: table-cell;
+    	width: 50%;
+		cursor: pointer;
+		padding-left: 8px;
+		text-align: right;
+		font-size: 45px;
+	    font-weight: bold;
+	    color: #d8d8d8;
+	    transition: color 0.35s linear;
+	}
+
+	.ncp-plugin .stat:hover .description,
+	.ncp-plugin .stat:hover .number {
+		color: #226491;
+	}
+
+	.ncp-plugin .stat .description {
+		cursor: pointer;
+	    display: table-cell;
+    	width: 50%;
+	    padding-left: 10px;
+		color: #d8d8d8;
+	    font-size: 19px;
+	    vertical-align: middle;
+	    text-align: left;
+	    transition: color 0.35s linear;
+	}
+
+	.ncp-plugin .coral-select-container {
+		float: left;
+	    width: 175px;
+	    text-align: left;
+	    margin-top: 20px;
+		font-size: 16px;
+	    clear: left;
+	}
+
+	.ncp-plugin .coral-select-container input[type=checkbox] {
+	  /* Double-sized Checkboxes */
+	    margin-top: 1px;
+		-ms-transform: scale(1.2);
+		-moz-transform: scale(1.2);
+		-webkit-transform: scale(1.2);
+		-o-transform: scale(14);
+		padding: 10px;
+	}
+
+	.ncp-plugin .coral-select-container span {
+		margin-left: 8px;
+		font-weight: 600;
+	}
+
+	.ncp-plugin .ncp-tooltip {
+		position: absolute;
+		display: none;
+		color: #333;
+		border: 1px solid #7EABCD;
+		background-color:  #fff;
+		padding: 5px;
+		border-radius: 5px;
+		font-size: 16px;
+		width: 240px;
+		z-index: 101;
+	}
+
+	/* Chart SVG Styles */
+
+	.ncp-plugin .chartContainer {
+		background: #f3f4f3;
+		text-align: center;
+	}
+
+	.ncp-plugin path {
+		stroke: #333;
+		stroke-width: 2px;
+		fill: none;
+	}
+
+	.ncp-plugin .tick line {
+		stroke: #333;
+	}
+
+	.ncp-plugin .tick.current {
+		font-weight: bold;
+	}
+
+	.ncp-plugin .points-current circle {
+		fill: #333;
+	}
+
+	.ncp-plugin path.scenario {
+		stroke: #333;
+	}
+
+	.ncp-plugin .points-scenario circle {
+		fill: #333;
+	}
+
+	.ncp-plugin .area-current {
+	    fill: #30928D;
+	    stroke-width: 0;
+	}
+
+	.ncp-plugin .area-scenario {
+	    fill: #923034;
+	    stroke-width: 0;
+	}
+
+	.ncp-plugin .area.scenario {
+	    fill: #923034;
+	    stroke-width: 0;
+	}
+
+	.ncp-plugin .xaxis-label,
+	.ncp-plugin .yaxis-label {
+		font-size: 16px;
+	}
+	.ncp-plugin .xaxis path,
+	.ncp-plugin .yaxis path {
+		fill: none;
+		stroke: #ccc;
+		stroke-width: 1px;
+		shape-rendering: crispEdges;
+	}
+
+	/* legend falls outside of plugin scope */
+	.esriLegendService img {
+		border: none;
+	}
+
+	.ncp-plugin .bar {
+		fill: #923034;
+	}
+
+	.ncp-plugin .bar.Present {
+		fill: #30928D;
+	}
+
+	.ncp-plugin .world-bank-report {
+		text-align: right;
+		margin-top: -6px;
+		margin-right: 8px;
+	}
+
+	.custom-legend .legend-item {
+		width: 15px;
+	    height: 10px;
+	    display: inline-block;
+	    margin-right: 5px;
+	}
+
+</style>
+
+	<div class="ncp-plugin">
+	    <div class="title">Flood Protection Provided by Coral Reefs</div>
+	    <div class="main-message">
+	    	Estimates of the benefits provided by reefs in flood protection annually and from catastrophic storms
+	    </div>
+	    <div class="controls-container clearfix">
+
+	    	<div class="region-select-container">
+	    		<span class="control-title">Country:</span><br>
+	    		<div class="styled-select">
+		    		<select class="region-select">
+		    			<optgroup label="Select Region">
+		    			<% _.each(regions, function(val, key) { %>
+		    				<option value="<%= key %>" <% if (key === "Global") { %> selected <% } %>> <%= key %></option>
+		    			<% }); %>
+		    			</optgroup>
+		    		</select>
+		    	</div>
+				<a class="download-summary js-getSnapshot" target="_blank" style="display: none">Download Country Summary <i class="fa fa-file-pdf-o" aria-hidden="true"></i></a>
+				<a class="download-summary" href="https://www.wavespartnership.org/sites/waves/files/kc/Technical%20Rept%20WAVES%20Coastal%202-11-16%20web.pdf" target="_blank">Download Waves Report <i class="fa fa-file-pdf-o" aria-hidden="true"></i></a>
+	    	</div>
+
+	    	<div class="storm-buttons-container">
+
+		    	<div class="radio-control">
+					<span class="control-title">
+						Annual Expected Benefit
+						<i data-tooltip="Annual expected benefits from reefs for flood protection  represents the predicted flooding avoided to land, people, and infrastructure by keeping coral reefs intact. It is an annualized benefit of the role of reefs in flood reduction that considers local factors such as reef condition, asset distribution, and storm frequency." class="fa fa-info-circle info-annual info-tooltip"></i>
+					</span>
+		    		<div class="check-group annual">
+						
+						<label>
+							<input  type="radio" name="storm<%=pane%>" value="ANN" checked="checked" />
+							<div class="radio-select"></div>
+							&nbsp;
+						</label>
+		    		</div>
+	    		</div>
+
+	    		<div class="radio-control radio-padding">
+					<span class="control-title">
+						Benefits from Catastrophic Storms
+						<i data-tooltip="30 years of historical data on regional sea level and wave conditions were used to develop a frequency distribution of storm sea levels and their intensity to estimate flooding for 1 in 10, 25, 50, and 100 year storm events." class="fa fa-info-circle info-period info-tooltip"></i>
+					</span>
+		    		<div class="check-group">
+						<label>
+							<input type="radio" name="storm<%=pane%>" value="25RP" />
+							<div class="radio-select"></div>
+							1 in 25-year storm
+						</label>
+		    		</div>
+		    		<div class="check-group">
+		    			<label>
+							<input type="radio" name="storm<%=pane%>" value="100RP" />
+							<div class="radio-select"></div>
+							1 in 100-year storm
+						</label>
+		    		</div>
+		    	</div>
+	    	</div>
+
+	    	<div class="coral-select-container">
+		    	<label><input type="checkbox" /><span>View Coral Reef Habitats</span></label>
+		    </div>
+
+	    </div>
+	    <div class="stats-description">The people and property protected by coral reefs (values represent predicted losses avoided by keeping reefs intact)</div>
+	    <div class="stats-container">
+
+	    	<div class="stat people active" data-layer="people">
+	    		<span class="number"><span class="variable"><%= global.E2E1_DIF_ANN_PF %></span></span>
+	    		<span class="description">People Protected
+	    			<i data-tooltip="This value represents the difference of flooding impacts on people when coral reefs are present and when there is 1 meter of reef loss. This value is aggregated to the country scale from 90m resolution data." class="fa fa-info-circle info-people info-tooltip"></i></span>
+	    	</div>
+
+	    	<div class="stat capital" data-layer="capital">
+	    		<span class="number">$<span class="variable"><%= global.E2E1_DIF_ANN_BCF %></span>M</span>
+	    		<span class="description"> Built Capital Protected
+	    			<i data-tooltip="This value represents the difference of flooding impacts on built capital when coral reefs are present and 
+					when there is 1 meter of reef loss. This value is aggregated
+					to the country scale from 90m resolution data." class="fa fa-info-circle info-capital info-tooltip"></i></span>
+	    		
+	    	</div>
+
+	    	<div class="stat area" data-layer="area">
+	    		<span class="number"><span class="variable"><%= global.E2E1_DIFF_ANN_AF %></span>km<sup>2</sup></span>
+	    		<span class="description">Area Protected
+	    			<i data-tooltip="This value represents the difference of flooding impacts on land area when coral reefs are present and when there is 1 meter of reef loss. This value is aggregated to the country scale from 90m resolution data. " class="fa fa-info-circle info-area info-tooltip"></i></span>
+
+	    	</div>
+
+	    </div>
+
+		<div class="ncp-tooltip"></div>
+	    <div class="chartContainer">
+
+	    </div>
+	</div>
+
+</script>
