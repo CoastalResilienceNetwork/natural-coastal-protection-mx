@@ -445,7 +445,6 @@ define([
 
             // Render the plugin DOM
             render: function() {
-                console.log(this.data)
                 var $el = $(this.pluginTmpl({
                     global: this.data["Quintana Roo"],
                     regions: _(this.data).chain().map(function(segment) {return segment.REGION;}).uniq().value(),
@@ -614,8 +613,6 @@ define([
 
                 // Initialize chart data 
                 this.addChartPoints();
-
-
             },
 
             // Initialize the chart points with empty values
