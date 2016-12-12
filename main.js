@@ -56,7 +56,7 @@ define([
         return declare(PluginBase, {
             toolbarName: "Protección costera natural",
             fullName: "Configure and control layers to be overlayed on the base map.",
-			infoGraphic: "plugins/natural_coastal_protection_mx/coastalprotection.jpg",
+			infoGraphic: "plugins/natural_coastal_protection/coastalprotection.jpg",
             resizable: true,
             width: 425,
             height: 740,
