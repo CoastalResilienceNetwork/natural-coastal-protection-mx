@@ -23,39 +23,46 @@ define([
     "dojo/_base/declare",
     "d3",
     "framework/PluginBase",
+    "dojo/i18n!esri/nls/jsapi",
     "esri/layers/ArcGISDynamicMapServiceLayer",
+    "esri/layers/FeatureLayer",
     "esri/layers/LayerDrawingOptions",
-    "esri/renderers/ClassBreaksRenderer",
     "esri/symbols/SimpleLineSymbol",
-    "esri/renderer",
     "esri/Color",
+    "esri/toolbars/draw",
+    "esri/graphic",
+    "esri/tasks/QueryTask",
+    "esri/tasks/query",
     "dojo/text!./template.html",
-    "dojo/text!./layers.json",
     "dojo/text!./data.json",
     "dojo/text!./country-config.json"
     ], function (declare,
               d3,
               PluginBase,
+              bundle,
               ArcGISDynamicMapServiceLayer,
+              FeatureLayer,
               LayerDrawingOptions,
-              ClassBreaksRenderer,
               SimpleLineSymbol,
-              Renderer,
               Color,
+              Draw,
+              Graphic,
+              QueryTask,
+              Query,
               templates,
-              layerSourcesJson,
               Data,
               CountryConfig
               ) {
         return declare(PluginBase, {
-            toolbarName: "Natural Coastal Protection",
+            toolbarName: "Protección costera natural",
             fullName: "Configure and control layers to be overlayed on the base map.",
-			infoGraphic: "plugins/natural_coastal_protection/coastalprotection.jpg",
+			infoGraphic: "plugins/natural_coastal_protection_mx/coastalprotection.jpg",
             resizable: true,
             width: 425,
             height: 740,
-            showServiceLayersInLegend: false, // Disable the default legend item which doesn't pick up our custom class breaks
+            showServiceLayersInLegend: true, // Disable the default legend item which doesn't pick up our custom class breaks
             allowIdentifyWhenActive: false,
+            drawing: false,
 
             initialize: function(frameworkParameters, currentRegion) {
                 declare.safeMixin(this, frameworkParameters);
@@ -65,10 +72,16 @@ define([
 
                 this.$el = $(this.container);
 
+                // Translate Built-in ArcGIS Strings
+                bundle.toolbars.draw.start = i18next.t("Click to start drawing");
+                bundle.toolbars.draw.resume = i18next.t("Click to continue drawing");
+                bundle.toolbars.draw.finish = i18next.t("Double click to complete");
+
                 // Default Settings
-                this.region = "Global";
+                this.region = "Quintana Roo";
                 this.period = "ANN";
                 this.layer = "people";
+                this.scenario = "";
                 this.variable = "PF";
 
                 this.bindEvents();
@@ -83,9 +96,12 @@ define([
                 };
                 this.chart.position.width = (this.width - 10)- this.chart.position.margin.left - this.chart.position.margin.right;
                 this.chart.position.height = 235  - this.chart.position.margin.top - this.chart.position.margin.bottom;
+                this.selectedUnits = [];
 
                 // Default class breaks and color ramps
+
                 var opacity = 1;
+
                 this.mapClassBreaks = {
                     people: [
                         [-99999,      0,  [120, 120, 120, opacity], "0", 1.5],
@@ -112,9 +128,81 @@ define([
                         [ 50,     100,  [215,48,39, opacity], "51 - 100", 3],
                         [100,   100000,  [165,0,38, opacity], "> 100", 3]
                     ],
+
                 };
 
-                //this.activeCountries = "COUNTRY_ID = 58 OR COUNTRY_ID = 66 OR COUNTRY_ID = 106 OR COUNTRY_ID = 113 OR COUNTRY_ID = 136 OR COUNTRY_ID = 145 OR COUNTRY_ID = 177 OR COUNTRY_ID = 223";
+                this.layers = {
+                    'Natural_Coastal_Protection_Final': 0,
+                    'Global Coral Reef Habitat': 1,
+                    'Annual Present People Protected': 2,
+                    'Annual Low CC 2030 People Protected': 3,
+                    'Annual High CC 2030 People Protected': 4,
+                    'Annual Low CC 2050 People Protected': 5,
+                    'Annual High CC 2050 People Protected': 6,
+                    '100 RP Present People Protected': 7,
+                    '100 RP Low CC 2030 People Protected': 8,
+                    '100 RP High CC 2030 People Protected': 9,
+                    '100 RP Low CC 2050 People Protected': 10,
+                    '100 RP High CC 2050 People Protected': 11,
+                    'Annual Present Built Capital Protected': 12,
+                    'Annual Low CC 2030 Built Capital Protected': 13,
+                    'Annual High CC 2030 Built Capital Protected': 14,
+                    'Annual Low CC 2050 Built Capital Protected': 15,
+                    'Annual High CC 2050 Built Capital Protected': 16,
+                    '100 RP Present Built Capital Protected': 17,
+                    '100 RP Low CC 2030 Built Capital Protected': 18,
+                    '100 RP High CC 2030 Built Capital Protected': 19,
+                    '100 RP Low CC 2050 Built Capital Protected': 20,
+                    '100 RP High CC 2050 Built Capital Protected': 21,
+                    'Annual Present Hotels Protected': 22,
+                    'Annual Low CC 2030 Hotels Protected': 23,
+                    'Annual High CC 2030 Hotels Protected': 24,
+                    'Annual Low CC 2050 Hotels Protected': 25,
+                    'Annual High CC 2050 Hotels Protected': 26,
+                    '100 RP Present Hotels Protected': 27,
+                    '100 RP Low CC 2030 Hotels Protected': 28,
+                    '100 RP High CC 2030 Hotels Protected': 29,
+                    '100 RP Low CC 2050 Hotels Protected': 30,
+                    '100 RP High CC 2050 Hotels Protected': 31
+                };
+            },
+
+            layerStringBuilder: function() {
+                var period = "",
+                    scenario = "",
+                    variable = "",
+                    layerString = "";
+
+                if (this.period === 'ANN') {
+                    period = 'Annual';
+                } else if (this.period ==="100RP") {
+                    period = '100 RP';
+                }
+
+                if (this.scenario === "L2030") {
+                    scenario = "Low CC 2030";
+                } else if (this.scenario === "H2030") {
+                    scenario = "High CC 2030";
+                } else if (this.scenario === "L2050") {
+                    scenario = "Low CC 2050";
+                } else if (this.scenario === "H2050") {
+                    scenario = "High CC 2050";
+                } else {
+                    scenario = "Present";
+                }
+
+                if (this.variable === "PF") {
+                    variable = "People Protected";
+                } else if (this.variable === "BCF") {
+                    variable = "Built Capital Protected";
+                } else if (this.variable === "HOTEL") {
+                    variable = "Hotels Protected";
+                }
+
+                layerString = period + " " + scenario + " " + variable;
+
+                return this.layers[layerString];
+
             },
 
             bindEvents: function() {
@@ -122,9 +210,11 @@ define([
 
                 // Set event listeners.  We bind "this" where needed so the event handler can access the full
                 // scope of the plugin
-                this.$el.on("change", "input[name=storm" + this.app.paneNumber + "]", $.proxy(this.changePeriod, this));
+                this.$el.on("change", "input[name=storm" + this.app.paneNumber + "]", $.proxy(this.changeGroupSelect, this));
+                this.$el.on("change", "input[type=radio]", $.proxy(this.getParameters, this));
                 this.$el.on("change", ".region-select", $.proxy(this.changeRegion, this));
                 this.$el.on("click", ".stat", function(e) {self.changeScenarioClick(e);});
+                this.$el.on("click", ".draw-button", $.proxy(this.drawCustomRegion, this));
                 this.$el.on("change", ".coral-select-container input", $.proxy(this.toggleCoral, this));
 
                 this.$el.on("mouseenter", ".info-tooltip", function(e) {self.showTooltip(e);});
@@ -132,7 +222,6 @@ define([
                 this.$el.on("mousemove", ".info-tooltip", function(e) {self.moveTooltip(e);});
 
                 this.$el.on("click", ".js-getSnapshot", $.proxy(this.printReport, this));
-
             },
 
             getLayersJson: function() {
@@ -143,25 +232,50 @@ define([
             // It sets up the layers with their default settings
 
             firstLoad: function() {
+                var self = this;
                 var layerDefs = [];
                 var layerDrawingOptions = [];
                 var layerDrawingOption = new LayerDrawingOptions();
-                var renderer = this.createRenderer(this.mapClassBreaks.people, "E2E1_DIF_ANN_PF");
 
-                this.coralReefLayer = new ArcGISDynamicMapServiceLayer("http://dev.services2.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer", {
+                this.coralReefLayer = new ArcGISDynamicMapServiceLayer("http://services.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer", {
                     visible: false,
                     opacity: 0.5
                 });
-                this.coralReefLayer.setVisibleLayers([1]);
+                this.coralReefLayer.setVisibleLayers([32]);
 
-                this.coastalProtectionLayer = new ArcGISDynamicMapServiceLayer("http://dev.services2.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer", {});
+                this.coastalProtectionLayer = new ArcGISDynamicMapServiceLayer("http://services.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer", {});
                 this.coastalProtectionLayer.setVisibleLayers([0]);
-                //layerDefs[0] = this.activeCountries;
-                //this.coastalProtectionLayer.setLayerDefinitions(layerDefs);
+                this.coastalProtectionFeatureLayer = new FeatureLayer("http://services.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer/3");
 
                 this.coastalProtectionLayer.setLayerDrawingOptions(layerDrawingOptions);
                 this.map.addLayer(this.coastalProtectionLayer);
                 this.map.addLayer(this.coralReefLayer);
+
+                this.draw = new Draw(this.map);
+                this.draw.on("draw-complete", function(evt) {
+                    self.drawing = false;
+                    self.$el.find(".draw-button").removeClass("active");
+                    self.$el.find(".region-select-container .styled-select").removeClass("disabled");
+                    self.draw.deactivate();
+                    
+                    var symbol = new SimpleLineSymbol();
+                    var graphic = new Graphic(evt.geometry, symbol);
+                    var query = new Query();
+                    query.spatialRelationship = Query.SPATIAL_REL_INTERSECTS;
+                    query.returnGeometry = false;
+                    query.outFields = ["UNIT_ID"];
+                    query.geometry = evt.geometry;
+                    self.map.graphics.add(graphic);
+                    self.coastalProtectionFeatureLayer.queryFeatures(query, function(featureset) {
+                        self.selectedUnits = _(featureset.features).map(function(feature) {
+                            return feature.attributes.UNIT_ID;
+                        });
+                        // TODO Probably set to new custom select value
+                        self.$el.find(".region-select").val("custom");
+                        self.changeRegion();
+                    });
+
+                });
 
             },
 
@@ -177,7 +291,7 @@ define([
                 // default variables
                 if (!this.coastalProtectionLayer || !this.coastalProtectionLayer.visible) {
                     this.firstLoad();
-                    this.region = "Global";
+                    this.region = "Quintana Roo";
                     this.period = "ANN";
                     this.layer = "people";
                     this.variable = "PF";
@@ -198,8 +312,7 @@ define([
                     this.$el.find(".coral-select-container input").prop("checked", true);
                 }
 
-                this.changePeriod();
-                this.changeScenario();
+                this.changeRegion();
 
             },
 
@@ -210,18 +323,66 @@ define([
                 } else {
                     this.coralReefLayer.setVisibility();
                 }
-                this.updateLegend();
             },
 
-            // Change the storm return period and update the facts to match
-            changePeriod: function() {
-                this.period = this.$el.find("input[name=storm" + this.app.paneNumber + "]:checked").val();
-                //http://stackoverflow.com/a/2901298
-                this.$el.find(".stat.people .number .variable").html(this.numberWithCommas(Math.round(this.data[this.region]["E2E1_DIF_" + this.period + "_PF"])));
-                this.$el.find(".stat.capital .number .variable").html(this.numberWithCommas(Math.round(this.data[this.region]["E2E1_DIF_" + this.period + "_BCF"] / 1000000)));
-                this.$el.find(".stat.area .number .variable").html(this.numberWithCommas(Math.round(this.data[this.region]["E2E1_DIF_" + this.period + "_AF"])));
+            updateLayers: function() {
+                var layerDefs = [];
+                var layerIdx = this.layerStringBuilder();
+                // Set the data extent
+                if (this.region === "Quintana Roo" || this.region === "draw") {
+                    layerDefs[layerIdx] = "";
+                } else if (this.region === "custom") {
+                    var definitions = [];
+                    _.each(this.selectedUnits, function(unit) {
+                        definitions.push("UNIT_ID=" + unit);
+                    });
+                    layerDefs[layerIdx] = definitions.join(" or ");
+                } else {
+                    layerDefs[layerIdx] = "REGION='" + this.region + "'";
+                }
+                
+                this.coastalProtectionLayer.setLayerDefinitions(layerDefs);
+                this.coastalProtectionLayer.setVisibleLayers([this.layerStringBuilder()]);
+            },
 
-                this.changeScenario();
+            getParameters: function () {
+                this.region = this.$el.find(".region-select").val();
+                this.period = this.$el.find("input[name=storm" + this.app.paneNumber + "]:checked").val();
+                this.scenario = this.$el.find("input[name=climate-scenario" + this.app.paneNumber + "]:checked").val();
+                this.layer = this.$el.find(".stat.active").closest(".stat").data("layer");
+
+                if (this.layer === "people") {
+                    this.variable = "PF";
+                } else if (this.layer === "capital") {
+                    this.variable = "BCF";
+                } else if (this.layer === "area") {
+                    this.variable = "HOTEL";
+                }
+
+                this.updateStats();
+                this.updateChart();
+                this.updateLayers();
+
+            },
+
+            changeGroupSelect: function(e) {
+                this.$el.find("input[name=storm" + this.app.paneNumber + "]:checked").closest(".expected-benefit").find(".slider-select").removeClass("disabled");
+                this.$el.find("input[name=storm" + this.app.paneNumber + "]:checked").closest(".expected-benefit").find("input[name=climate-scenario" + this.app.paneNumber + "]").first().prop("checked", true);
+                this.$el.find("input[name=storm" + this.app.paneNumber + "]").not(":checked").closest(".expected-benefit").find(".slider-select").addClass("disabled");
+            },
+
+            updateStats: function() {
+                var scenarioLabel;
+
+                if (this.scenario !== '') {
+                    scenarioLabel = "_" + this.scenario;
+                } else {
+                    scenarioLabel = "";
+                }
+
+                this.$el.find(".stat.people .number .variable").html(this.numberWithCommas(Math.round(this.getRegionSum("E2E1_DIF_" + this.period + "_PF" + scenarioLabel, this.region))));
+                this.$el.find(".stat.capital .number .variable").html(this.getRegionSum("E2E1_DIF_" + this.period + "_BCF" + scenarioLabel, this.region).toFixed(2));
+                this.$el.find(".stat.area .number .variable").html((this.getRegionSum("E2E1_DIF_" + this.period + "_HOTEL" + scenarioLabel, this.region) / 1000000).toFixed(2));
             },
 
             // format a number with commas
@@ -232,91 +393,92 @@ define([
             // Change the default region.  If global, zoom to the full extent and show data for all countries.  If regional,
             // zoom to the country based on the bookmark in the extent-bookmarks.json file and hide data for all other countries
             changeRegion: function() {
-                this.region = this.$el.find(".region-select").val();
-
+                this.getParameters();
                 // Show/hide the download country summary button
-                if (this.region === "Global") {
-                    this.$el.find(".js-getSnapshot").hide();
-                } else {
+                if (this.region === "Quintana Roo") {
                     this.$el.find(".js-getSnapshot").show();
+                } else if (this.region === "custom") {
+                    this.$el.find(".js-getSnapshot").hide();
+                    return;
+                } else {
+                    this.$el.find(".js-getSnapshot").hide();
                 }
 
-                this.changePeriod();
+                this.map.graphics.clear();
 
-                var layerDefs = [];
                 var regionExtent = this.countryConfig[this.region].EXTENT;
 
-                var extent;
+                var extent = new esri.geometry.Extent(regionExtent[0],regionExtent[1],regionExtent[2],regionExtent[3]);
 
-                // Set the zoom extent
-                if (this.region === "Global") {
-                    var initialExtent = this.app.regionConfig.initialExtent;
-                    extent = new esri.geometry.Extent(initialExtent[0],initialExtent[1],initialExtent[2],initialExtent[3]);
-                } else {
-                    extent = new esri.geometry.Extent(regionExtent[0],regionExtent[1],regionExtent[2],regionExtent[3]);
-                }
-
-                // Set the data extent
-                if (this.region === "Global") {
-                    layerDefs[0] = ""; //this.activeCountries;
-                } else if (this.region === "US/Puerto Rico") {
-                    layerDefs[0] = "COUNTRY='United States & Puerto Rico'";
-                } else {
-                    layerDefs[0] = "COUNTRY='" + this.region + "'";
-                }
-                this.coastalProtectionLayer.setLayerDefinitions(layerDefs);
                 this.map.setExtent(extent);
+            },
 
-                this.updateChart();
+            drawCustomRegion: function() {
+                if (this.drawing) {
+                    this.drawing = false;
+                    this.$el.find(".region-select-container .styled-select").removeClass("disabled");
+                    this.$el.find(".draw-button").removeClass("active");
+                    this.map.graphics.clear();
+                    this.draw.deactivate();
+                } else {
+                    this.drawing = true;
+                    this.$el.find(".region-select-container .styled-select").addClass("disabled");
+                    this.$el.find(".draw-button").addClass("active");
+                    
+                    // Reset to global data
+                    this.region = "Quintana Roo";
+                    this.$el.find(".region-select").val(this.region);
+                    this.updateLayers();
 
+                    this.map.graphics.clear();
+                    this.draw.activate(Draw.POLYGON);
+                }
             },
 
             // Capture the click from the fact number click events and pass to the changeScenario function
             changeScenarioClick: function(e) {
-                this.layer = $(e.currentTarget).closest(".stat").data("layer");
                 this.$el.find(".stat.active").removeClass("active");
                 $(e.currentTarget).closest(".stat").addClass("active");
 
-                this.changeScenario();
-            },
-
-            // Update the renderer to reflect storm return period and the fact being displayed.
-            changeScenario: function() {
-                var layerDrawingOptions = [];
-                var layerDrawingOption = new LayerDrawingOptions();
-                var renderer;
-                if (this.layer === "people") {
-                    this.variable = "PF";
-                    renderer = this.createRenderer(this.mapClassBreaks.people, "E2E1_DIF_" + this.period + "_" + this.variable);
-                } else if (this.layer === "capital") {
-                    this.variable = "BCF";
-                    renderer = this.createRenderer(this.mapClassBreaks.capital, "E2E1_DIF_" + this.period + "_" + this.variable);
-                } else if (this.layer === "area") {
-                    this.variable = "AF";
-                    renderer = this.createRenderer(this.mapClassBreaks.area, "E2E1_DIF_" + this.period + "_" + this.variable);
-                }
-
-                layerDrawingOption.renderer = renderer;
-                layerDrawingOptions[0] = layerDrawingOption;
-                this.coastalProtectionLayer.setLayerDrawingOptions(layerDrawingOptions);
-
-                this.coastalProtectionLayer.refresh();
-
-                this.updateChart();
-                this.updateLegend();
-                
+                this.getParameters();
             },
 
             // Render the plugin DOM
             render: function() {
-
+                console.log(this.data)
                 var $el = $(this.pluginTmpl({
-                    global: this.data.Global,
-                    regions: this.data,
+                    global: this.data["Quintana Roo"],
+                    regions: _(this.data).chain().map(function(segment) {return segment.REGION;}).uniq().value(),
                     pane: this.app.paneNumber
                 }));
 
                 $(this.container).empty().append($el);
+
+
+                this.$el.find('.i18n').localize();
+
+            },
+
+            getRegionSum: function(attribute, region) {
+                var self = this;
+                // Return the summed attribute for the specified region
+                if (region && region !== "Quintana Roo" && region !== "custom") {
+                    return _(this.data).chain().where({REGION: region}).reduce(function(num, segment) {
+                        return parseFloat(segment[attribute]) + num;
+                    }, 0).value();
+                } else if (region && region === "custom") {
+                    return _(this.data).reduce(function(num, segment) {
+                        if (_.contains(self.selectedUnits, segment.UNIT_ID) ) {
+                            return parseFloat(segment[attribute]) + num;
+                        }
+                        return 0 + num;
+                    }, 0);
+                } else {
+                    // Otherwise, return the global sum
+                    return _(this.data).reduce(function(num, segment) {
+                        return parseFloat(segment[attribute]) + num;
+                    }, 0);
+                }
 
             },
 
@@ -330,11 +492,11 @@ define([
 
                 if (this.coastalProtectionLayer.visible) {
                     if (this.layer === "people") {
-                        html += "People Protected (No.)<br>";
+                        html += i18next.t("People Protected (No.)") + "<br>";
                     } else if (this.layer === "capital") {
-                        html += "Built Capital Protected ($Millions)<br>";
+                        html += i18next.t("Built Capital Protected ($Millions)") + "<br>";
                     } else if (this.layer === "area") {
-                        html += "Area Protected (sq km)<br>";
+                        html += i18next.t("Area Protected (sq km)") + "<br>";
                     }
 
                     _.each(this.mapClassBreaks[this.layer], function (classbreak) {
@@ -356,7 +518,11 @@ define([
 
             // Show graph tooltip on hover
             showGraphTooltip: function(d, self) {
-                self.$el.find(".ncp-tooltip").html(parseInt(d.y).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")).css({width: "auto"}).show();
+                if (d.y < 10) {
+                    self.$el.find(".ncp-tooltip").html(d.y.toFixed(2)).css({width: "auto"}).show();
+                } else {
+                    self.$el.find(".ncp-tooltip").html(parseInt(d.y).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")).css({width: "auto"}).show();
+                }
             },
 
             // Track graph tooltip to mouse movement
@@ -390,11 +556,6 @@ define([
             renderChart: function() {
                 var self = this;
 
-                // Our x values are always the same.  Treat them as ordinal and hard code them here
-                this.chart.x = d3.scale.ordinal()
-                    .domain([0, 10, 25, 50, 100])
-                    .rangePoints([0, this.chart.position.width]);
-
                 // The x-axis for the bar chart is also ordinal with two values
                 this.chart.barx = d3.scale.ordinal()
                     .domain(["Present", "Reef Loss"])
@@ -403,32 +564,16 @@ define([
                 this.chart.y = d3.scale.linear()
                     .range([this.chart.position.height-20,0]);
 
-                this.chart.xAxis = d3.svg.axis()
-                    .scale(this.chart.x)
-                    .orient("bottom");
-
                 this.chart.barxAxis = d3.svg.axis()
+                    .tickFormat(function(d) {
+                        return i18next.t(d);
+                    })
                     .scale(this.chart.barx)
                     .orient("bottom");
 
                 this.chart.yAxis = d3.svg.axis()
                     .scale(this.chart.y)
                     .orient("left").ticks(5);
-
-                this.chart.area = {};
-                this.chart.area.current = d3.svg.area()
-                    .x(function(d) { return self.chart.x(d.x); })
-                    .y0(this.chart.position.height - 20)
-                    .y1(function(d) { return self.chart.y(d.y); });
-
-                this.chart.area.scenario = d3.svg.area()
-                    .x(function(d) { return self.chart.x(d.x); })
-                    .y0(this.chart.position.height - 20)
-                    .y1(function(d) { return self.chart.y(d.y); });
-
-                this.chart.valueline = d3.svg.line()
-                    .x(function(d) { return self.chart.x(d.x); })
-                    .y(function(d) { return self.chart.y(d.y); });
                 
                 var $chartContainer = this.$el.find(".chartContainer");
 
@@ -446,13 +591,6 @@ define([
                     .attr("height", this.chart.position.height - 20)
                     .attr("fill", "#f6f6f6");
 
-                // Add the xaxis
-                this.chart.svg.append("g")
-                    .attr("opacity", 0)
-                    .attr("class", "xaxis")
-                    .attr("transform", "translate(0," + (this.chart.position.height-20) + ")")
-                    .call(this.chart.xAxis);
-
                 // Add the xaxis for the bar chart
                 this.chart.svg.append("g")
                     .attr("opacity", 1)
@@ -460,54 +598,19 @@ define([
                     .attr("transform", "translate(0," + (this.chart.position.height-20) + ")")
                     .call(this.chart.barxAxis);
 
-                // Add the x-axis label
-                this.chart.svg.append("text")
-                    .attr("class", "xaxis-label")
-                    .attr("opacity", 0)
-                    .attr("text-anchor", "middle")
-                    .attr("transform", "translate(" + (this.chart.position.width / 2) + "," + (this.chart.position.height + 20) + ")")
-                    .text("Storm Return Period");
-
                 // Add the y-axis label
-                this.chart.svg.append("text")
+                this.chart.svg.append("foreignObject")
                     .attr("class", "yaxis-label")
                     .attr("transform", "rotate(-90)")
-                    .attr("y", 0 - this.chart.position.margin.left + 20)
-                    .attr("x", 0 - (this.chart.position.height / 2))
+                    .attr("y", 0 - this.chart.position.margin.left + 5)
+                    .attr("x", 0 - (this.chart.position.height - 10))
+                    .attr("width", this.chart.position.height - 20)
                     .attr("text-anchor", "middle")
-                    .text("People at Risk (No.)");
+                    .text(i18next.t('People Protected (No.)'));
 
                 this.chart.svg.append("g")
                     .attr("class", "yaxis")
                     .call(this.chart.yAxis);
-
-                // Add chart legend
-                this.chart.legend = this.chart.svg.append("g")
-                    .attr("class", "chart-legend")
-                    .attr("opacity", 0);
-
-                    this.chart.legend.append("rect")
-                        .attr("width", "25")
-                        .attr("height", "15")
-                        .attr("x", "5")
-                        .attr("fill", "#30928D");
-
-                    this.chart.legend.append("text")
-                        .text("Present")
-                        .attr("x", "32")
-                        .attr("y", "11");
-                    
-                    this.chart.legend.append("rect")
-                        .attr("width", "25")
-                        .attr("height", "15")
-                        .attr("x", "5")
-                        .attr("y", "18")
-                        .attr("fill", "#923034");
-
-                    this.chart.legend.append("text")
-                        .text("Reef Loss")
-                        .attr("x", "32")
-                        .attr("y", "29");
 
                 // Initialize chart data 
                 this.addChartPoints();
@@ -518,109 +621,6 @@ define([
             // Initialize the chart points with empty values
             addChartPoints: function() {
                 var self = this;
-                this.chart.data = {};
-                this.chart.data.current = {};
-                this.chart.data.current.x = [0,10,25,50,100];
-                this.chart.data.current.barx = ["Present", "Reef Loss"];
-                this.chart.data.current.y = [0,0,0,0,0];
-                this.chart.data.current.xy = [];
-
-                this.chart.data.scenario = {};
-                this.chart.data.scenario.x = [0,10,25,50,100];
-                this.chart.data.scenario.barx = ["Present", "Reem Loss"];
-                this.chart.data.scenario.y = [0,0,0,0,0];
-                this.chart.data.scenario.xy = [];
-
-                // Create an array of xy point data for the current scenario
-                for (var i=0; i<this.chart.data.current.x.length; i++) {
-                    this.chart.data.current.xy.push(
-                        {
-                            x: this.chart.data.current.x[i], 
-                            y: this.chart.data.current.y[i]
-                        }
-                    );
-                }
-
-                // Create an array of xy point data for the 1m loss scenario
-                for (var j=0; j<this.chart.data.scenario.x.length; j++) {
-                    this.chart.data.scenario.xy.push(
-                        {
-                            x: this.chart.data.scenario.x[j],
-                            y: this.chart.data.scenario.y[j]
-                        }
-                    );
-                }
-
-                // Attach the 1m loss data
-                this.chart.svg
-                    .data([this.chart.data.scenario.xy])
-                    .append("path")
-                    .attr("opacity", 0)
-                    .attr("class", "area-scenario")
-                    .attr("d", this.chart.area.scenario);
-
-                // Attach the current scenario data
-                this.chart.svg
-                    .data([this.chart.data.current.xy])
-                    .append("path")
-                    .attr("opacity", 0)
-                    .attr("class", "area-current")
-                    .attr("d", this.chart.area.current);
-
-                // Create an interpolation line between points
-                this.chart.svg
-                    .append("path")
-                    .attr("class", "line current")
-                    .attr("opacity", 0)
-                    .attr("d", this.chart.valueline(this.chart.data.current.xy));
-
-                this.chart.pointscurrent = this.chart.svg.append("g")
-                    .attr("class", "points-current");
-
-                // Add circles for each current scenario point and show value on mouseover
-                this.chart.pointscurrent.selectAll('circle')
-                    .data(this.chart.data.current.xy)
-                    .enter().append('circle')
-                    .attr("opacity", 0)
-                    .attr("cx", function(d) { return self.chart.x(d.x); })
-                    .attr("cy", function(d) { return self.chart.y(d.y); })
-                    .attr("r", 3.5)
-                    .on("mouseover", function(e) {
-                        self.showGraphTooltip(e, self);
-                    })
-                    .on("mousemove", function(d) {
-                        self.moveGraphTooltip(d, this, self);
-                    })
-                    .on("mouseout", function() {
-                        self.hideTooltip(self);
-                    });
-
-                this.chart.svg
-                    .append("path")
-                    .attr("opacity", 0)
-                    .attr("class", "line scenario")
-                    .attr("d", this.chart.valueline(this.chart.data.scenario.xy));
-
-                this.chart.pointsscenario = this.chart.svg.append("g")
-                    .attr("class", "points-scenario");
-
-                // Add circles for each 1m loss scenario point and show value on mouseover
-                this.chart.pointsscenario.selectAll('circle')
-                    .data(this.chart.data.scenario.xy)
-                    .enter().append('circle')
-                    .attr("opacity", 0)
-                    .attr("cx", function(d) { return self.chart.x(d.x); })
-                    .attr("cy", function(d) { return self.chart.y(d.y); })
-                    .attr("r", 3.5)
-                    .on("mouseover", function(e) {
-                        self.showGraphTooltip(e, self);
-                    })
-                    .on("mousemove", function(d) {
-                        self.moveGraphTooltip(d, this, self);
-                    })
-                    .on("mouseout", function() {
-                        self.hideTooltip(self);
-                    });
 
                 // Bar chart
                 var bardata = [
@@ -654,85 +654,38 @@ define([
             updateChart: function() {
                 var self = this;
 
-                // Built Capital should be divided by 1 million
-                var division = 1;
-                if (this.variable === "BCF") {
-                    division = 1000000;
-                }
-
-                var annual = false;
-                if(this.period === "ANN") {
-                    annual = true;
-                }
-
                 // Update the  y-axis label to match the current variable selected
                 var text = "";
                 if (this.variable === "BCF") {
-                    text = "Built Capital at Risk ($Millions)";
+                    text = i18next.t('Built Capital Protected ($Millions)');
                 } else if (this.variable === "PF") {
-                    text = "People at Risk (No.)";
-                } else if (this.variable === "AF") {
-                    text = "Area at Risk (sq km)";
+                    text = i18next.t('People Protected (No.)');
+                } else if (this.variable === "HOTEL") {
+                    text = i18next.t('Hotels Protected ($Millions)');
                 }
 
                 this.chart.svg.select(".yaxis-label")
-                        .transition().duration(600)
-                        .style("opacity", 0)
-                        .transition().duration(600)
-                        .style("opacity", 1)
-                        .text(text);
-
-                // Get the data for the scenario from the data.json file and divide into the correct units if specified.  Default is 1
-                this.chart.data.current.xy = [];
-                this.chart.data.current.y = [
-                    this.data[this.region]["E1_ANN_" + this.variable] / division,
-                    this.data[this.region]["E1_10RP_" + this.variable] / division,
-                    this.data[this.region]["E1_25RP_"+ this.variable] / division,
-                    this.data[this.region]["E1_50RP_" + this.variable] / division,
-                    this.data[this.region]["E1_100RP_" + this.variable] / division
-                ];
-
-                // Create array of xy values for drawing chart points
-                for (var i=0; i<this.chart.data.current.x.length; i++) {
-                    this.chart.data.current.xy.push(
-                        {
-                            x: this.chart.data.current.x[i], 
-                            y: this.chart.data.current.y[i]
-                        }
-                    );
-                }
-
-                this.chart.data.scenario.xy = [];
-                this.chart.data.scenario.y = [
-                    this.data[this.region]["E2_ANN_" + this.variable] / division,
-                    this.data[this.region]["E2_10RP_" + this.variable] / division,
-                    this.data[this.region]["E2_25RP_"+ this.variable] / division,
-                    this.data[this.region]["E2_50RP_" + this.variable] / division,
-                    this.data[this.region]["E2_100RP_" + this.variable] / division
-                ];
-
-                for (var j=0; j<this.chart.data.scenario.x.length; j++) {
-                    this.chart.data.scenario.xy.push(
-                        {
-                            x: this.chart.data.scenario.x[j], 
-                            y: this.chart.data.scenario.y[j]
-                        }
-                    );
-                }
+                    .text(text);
 
                 var bary;
                 var bary1m;
 
+                if (this.scenario !== '') {
+                    scenarioLabel = "_" + this.scenario;
+                } else {
+                    scenarioLabel = "";
+                }
+
                 // Set the data for the bar chart
                 if (this.variable === "BCF") {
-                    bary = this.data[this.region].E1_ANN_BCF / division;
-                    bary1m = this.data[this.region].E2_ANN_BCF / division;
+                    bary = this.getRegionSum("E1_" + this.period + "_BCF" + scenarioLabel, this.region);
+                    bary1m = this.getRegionSum("E2_" + this.period + "_BCF" + scenarioLabel, this.region);
                 } else if (this.variable === "PF") {
-                    bary = this.data[this.region].E1_ANN_PF / division;
-                    bary1m = this.data[this.region].E2_ANN_PF / division;
-                } else if (this.variable === "AF") {
-                    bary = this.data[this.region].E1_ANN_AF / division;
-                    bary1m = this.data[this.region].E2_ANN_AF / division;
+                    bary = this.getRegionSum("E1_" + this.period + "_PF" + scenarioLabel, this.region);
+                    bary1m = this.getRegionSum("E2_" + this.period + "_PF" + scenarioLabel, this.region);
+                } else if (this.variable === "HOTEL") {
+                    bary = this.getRegionSum("E1_" + this.period + "_HOTEL" + scenarioLabel, this.region);
+                    bary1m = this.getRegionSum("E2_" + this.period + "_HOTEL" + scenarioLabel, this.region);
                 }
 
                 var bardata = [
@@ -740,142 +693,26 @@ define([
                     {x: "Reef Loss", y: bary1m}
                 ];
 
-                if(this.period === "ANN") {
-                    // Set the y-axis for the bar chart
-                    this.chart.y.domain([0, bary1m]);
-                } else {
-                    // Set the y-axis for the line chart
-                    this.chart.y.domain([0, d3.max(this.chart.data.scenario.y)]);
-                    // Add a DOM class to the active point and legend text so the currently selected storm return
-                    // period can be bolded in the chart
-                    if (this.period === "25RP") {
-                        this.chart.svg.selectAll(".xaxis .tick").classed("current", false).each(function(d, i) {
-                            if ( d === 25 ) {
-                                d3.select(this)
-                                    .classed("current", true);
-                            }
-                        });
-                    }
-                    if (this.period === "100RP") {
-                        this.chart.svg.selectAll(".xaxis .tick").classed("current", false).each(function(d, i) {
-                            if ( d === 100 ) {
-                                d3.select(this)
-                                    .classed("current", true);
-                            }
-                        });
-                    }
-                }
+                this.chart.y.domain([0, bary1m]);
 
                 // Show and hide as appropriate all the different elements.  We animate these over the course of 1200ms
                 this.chart.svg.select(".yaxis")
                     .transition().duration(1200).ease("linear")
                     .call(this.chart.yAxis);
 
-                this.chart.svg.select(".xaxis")
-                    .transition().duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 0 : 1);
-
                 this.chart.svg.select(".barxaxis")
                     .transition().duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 1 : 0);
-
-                this.chart.svg.select(".xaxis-label")
-                    .transition().duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 0 : 1);
-
-                this.chart.legend
-                    .transition().delay(750).duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 0 : 1);
-
-                this.chart.svg.select(".line.current")
-                    .transition().duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 0 : 1)
-                    .attr("d", this.chart.valueline(this.chart.data.current.xy));
-
-                this.chart.svg.select(".area-current")
-                    .data([this.chart.data.current.xy])
-                    .transition().duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 0 : 1)
-                    .attr("d", this.chart.area.current);
-
-                // Update the chart point data and adjust point position on chart to match
-                this.chart.pointscurrent.selectAll('circle')
-                    .data(this.chart.data.current.xy)
-                    .transition().duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 0 : 1)
-                    .attr("cx", function(d) { return self.chart.x(d.x); })
-                    .attr("cy", function(d) { return self.chart.y(d.y); })
-                     .attr("r", function(d) {
-                        var period;
-                        if (self.period === "25RP") {
-                            period = 25;
-                        } else if (self.period === "100RP") {
-                            period = 100;
-                        }
-                        if (d.x === period) {
-                           return 5;
-                        } else {
-                            return 3.5;
-                        }
-                    });
-
-                // Update the position of the interpolation line to match the new point position
-                this.chart.svg.select(".line.scenario")
-                    .transition().duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 0 : 1)
-                    .attr("d", this.chart.valueline(this.chart.data.scenario.xy));
-
-                this.chart.svg.select(".area-scenario")
-                    .data([this.chart.data.scenario.xy])
-                    .transition().duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 0 : 1)
-                    .attr("d", this.chart.area.scenario);
-
-                this.chart.pointsscenario.selectAll('circle')
-                    .data(this.chart.data.scenario.xy)
-                    .transition().duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 0 : 1)
-                    .attr("cx", function(d) { return self.chart.x(d.x); })
-                    .attr("cy", function(d) { return self.chart.y(d.y); })
-                    .attr("r", function(d) {
-                        var period;
-                        if (self.period === "25RP") {
-                            period = 25;
-                        } else if (self.period === "100RP") {
-                            period = 100;
-                        }
-                        if (d.x === period) {
-                           return 5;
-                        } else {
-                            return 3.5;
-                        }
-                    });
+                    .attr("opacity", 1);
 
                 this.chart.svg.selectAll(".bar")
                     .data(bardata)
                     .transition().duration(1200).ease("sin-in-out")
-                    .attr("opacity", annual ? 1 : 0)
+                    .attr("opacity", 1)
                     .attr("width", this.chart.barx.rangeBand())
                     .attr("class", function(d) {return "bar " + d.x;})
                     .attr("x", function(d) { return self.chart.barx(d.x); })
                     .attr("y", function(d) { return self.chart.y(d.y); })
                     .attr("height", function(d) { return self.chart.position.height - 20 - self.chart.y(d.y); });
-            },
-
-            // Create a renderer for the coastal protection layer using the custom defined classbreaks and colors for each
-            // scenario and fact combination
-            createRenderer: function(classBreaks, field) {
-                var defaultSymbol = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([0,0,0,0]), 0);
-                var renderer = new ClassBreaksRenderer(defaultSymbol, field);
-                _(classBreaks).each(function(classBreak) {
-                    renderer.addBreak({
-                        minValue: classBreak[0], 
-                        maxValue: classBreak[1], 
-                        symbol: SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color(classBreak[2]), classBreak[4]),
-                        label: classBreak[3]
-                    });
-                });
-                return renderer;
             },
 
             // Download the pdf report for the current region
