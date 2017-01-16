@@ -1,0 +1,46 @@
+{
+	"Quintana Roo" : {
+		"EXTENT" : [-92.208252,17.130292,-85.177002,21.881890],
+		"SNAPSHOT": "http://ow-maps.oceanwealth.org/NCP_Snapshots/Quintana_Roo.pdf"
+	},
+	"Othón P. Blanco" : {
+		"EXTENT" : [-91.167297,17.384716,-86.553040,19.740854],
+		"SNAPSHOT": ""
+	},
+	"Bacalar" : {
+		"EXTENT" : [-87.855263,19.011164,-87.415810,19.308875],
+		"SNAPSHOT": ""
+	},
+	"Felipe Carrillo Puerto" : {
+		"EXTENT" : [-90.975037,18.401443,-86.360779,20.743272],
+		"SNAPSHOT": ""
+	},
+	"Tulum" : {
+		"EXTENT" : [-88.703613,19.571436,-86.945801,20.754830],
+		"SNAPSHOT": ""
+	},
+	"Cozumel" : {
+		"EXTENT" : [-87.654419,20.096561,-86.500854,20.679045],
+		"SNAPSHOT": ""
+	},
+	"Solidaridad" : {
+		"EXTENT" : [-88.482513,20.164255,-86.175385,21.326477],
+		"SNAPSHOT": ""
+	},
+	"Puerto Morelos" : {
+		"EXTENT" : [-87.073689,20.764942,-86.785297,21],
+		"SNAPSHOT": ""
+	},
+	"Benito Juárez" : {
+		"EXTENT" : [-88.099365,20.508068,-86.341553,21.684229],
+		"SNAPSHOT": ""
+	},
+	"Isla Mujeres" : {
+		"EXTENT" : [-86.832247,21.2,-86.688051,21.28],
+		"SNAPSHOT": ""
+	},
+	"Lázaro Cárdenas" : {
+		"EXTENT" : [-87.8,21.194015,-86.93,21.780543],
+		"SNAPSHOT": ""
+	}
+}
