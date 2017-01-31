@@ -399,6 +399,11 @@ define([
                     this.$el.find(".js-getSnapshot").show();
                 } else if (this.region === "custom") {
                     this.$el.find(".js-getSnapshot").hide();
+                    ga('send', 'event', {
+                        eventCategory: 'NCP-MX',
+                        eventAction: 'change region',
+                        eventLabel: 'custom'
+                    });
                     return;
                 } else {
                     this.$el.find(".js-getSnapshot").hide();
@@ -411,6 +416,12 @@ define([
                 var extent = new esri.geometry.Extent(regionExtent[0],regionExtent[1],regionExtent[2],regionExtent[3]);
 
                 this.map.setExtent(extent);
+
+                ga('send', 'event', {
+                    eventCategory: 'NCP-MX',
+                    eventAction: 'change region',
+                    eventLabel: this.region
+                });
             },
 
             drawCustomRegion: function() {
