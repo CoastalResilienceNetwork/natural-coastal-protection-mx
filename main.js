@@ -400,7 +400,7 @@ define([
                 } else if (this.region === "custom") {
                     this.$el.find(".js-getSnapshot").hide();
                     ga('send', 'event', {
-                        eventCategory: 'MAR',
+                        eventCategory: 'NCP-MX',
                         eventAction: 'change region',
                         eventLabel: 'custom'
                     });
@@ -418,7 +418,7 @@ define([
                 this.map.setExtent(extent);
 
                 ga('send', 'event', {
-                    eventCategory: 'MAR',
+                    eventCategory: 'NCP-MX',
                     eventAction: 'change region',
                     eventLabel: this.region
                 });
