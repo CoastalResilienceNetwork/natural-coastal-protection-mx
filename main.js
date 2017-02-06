@@ -57,12 +57,12 @@ define([
             toolbarName: "Protección costera natural",
             fullName: "Configure and control layers to be overlayed on the base map.",
 			infoGraphic: "plugins/natural_coastal_protection/coastalprotection.jpg",
-            resizable: true,
+            resizable: false,
             width: 425,
-            height: 740,
             showServiceLayersInLegend: true, // Disable the default legend item which doesn't pick up our custom class breaks
             allowIdentifyWhenActive: false,
             drawing: false,
+            size:'custom',
 
             initialize: function(frameworkParameters, currentRegion) {
                 declare.safeMixin(this, frameworkParameters);
@@ -399,6 +399,11 @@ define([
                     this.$el.find(".js-getSnapshot").show();
                 } else if (this.region === "custom") {
                     this.$el.find(".js-getSnapshot").hide();
+                    ga('send', 'event', {
+                        eventCategory: 'MAR',
+                        eventAction: 'change region',
+                        eventLabel: 'custom'
+                    });
                     return;
                 } else {
                     this.$el.find(".js-getSnapshot").hide();
@@ -411,6 +416,12 @@ define([
                 var extent = new esri.geometry.Extent(regionExtent[0],regionExtent[1],regionExtent[2],regionExtent[3]);
 
                 this.map.setExtent(extent);
+
+                ga('send', 'event', {
+                    eventCategory: 'MAR',
+                    eventAction: 'change region',
+                    eventLabel: this.region
+                });
             },
 
             drawCustomRegion: function() {
