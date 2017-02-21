@@ -737,6 +737,18 @@ define([
                     .html().trim();
             },
 
+            deactivate: function() {
+                if (this.appDiv !== undefined){
+                    if (this.coralReefLayer) {
+                        this.map.removeLayer(this.coralReefLayer);
+                    }
+                    if (this.coastalProtectionLayer) {
+                        this.map.removeLayer(this.coastalProtectionLayer);
+                    }
+                    $(this.legendContainer).hide().html();
+                }
+            },
+
             // Turn of the layers when hibernating
             hibernate: function () {
                 // Cleanup
