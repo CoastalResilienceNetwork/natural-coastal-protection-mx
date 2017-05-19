@@ -209,13 +209,13 @@
 	    width: 24px;
 	    height: 30px;
 	    margin-top: 4px;
-	    background: url("plugins/natural_coastal_protection_mx/pointer.svg") center no-repeat;
+	    background: url("plugins/natural_coastal_protection/pointer.svg") center no-repeat;
 	    border: 1px solid gray;
 	    cursor: pointer;
 	}
 
 	.mar-plugin .draw-button.active {
-		background: url("plugins/natural_coastal_protection_mx/pointer-blue.svg") center no-repeat;
+		background: url("plugins/natural_coastal_protection/pointer-blue.svg") center no-repeat;
 	}
 
 	.mar-plugin .info-tooltip {
@@ -367,6 +367,7 @@
     	left: 152px;
 		cursor: pointer;
 		color: #d8d8d8;
+		font-size: 13px;
 	    line-height: normal;
 	    transition: color 0.35s linear;
 	}
@@ -654,8 +655,7 @@
 	    	<div class="stat area" data-layer="area">
 	    		<div class="number">$<span class="variable"><%= this.getRegionSum("E2E1_DIF_ANN_HOTEL") %></span><span class="units">M</span></div>
 	    		<div class="description">
-	    			<span class="i18n" data-i18n="Hotels Protected">Hotels Protected</span>
-	    			<i data-i18n="[title]This value represents the difference of flooding impacts on land area when coral reefs are present and when there is 1 meter of reef loss. This value is aggregated to the country scale from 90m resolution data." title="This value represents the difference of flooding impacts on land area when coral reefs are present and when there is 1 meter of reef loss. This value is aggregated to the country scale from 90m resolution data." class="fa fa-info-circle info-area info-tooltip i18n"></i></div>
+	    			<span class="i18n" data-i18n="Hotels Protected">Hotels Protected</span><i data-i18n="[title]This value represents the difference of flooding impacts on land area when coral reefs are present and when there is 1 meter of reef loss. This value is aggregated to the country scale from 90m resolution data." title="This value represents the difference of flooding impacts on land area when coral reefs are present and when there is 1 meter of reef loss. This value is aggregated to the country scale from 90m resolution data." class="fa fa-info-circle info-area info-tooltip i18n" style="display: inline;"></i></div>
 
 	    	</div>
 
