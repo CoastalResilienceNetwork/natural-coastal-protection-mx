@@ -2,16 +2,6 @@ require({
     // Specify library locations.
     packages: [
         {
-            name: "jquery",
-            location: "//ajax.googleapis.com/ajax/libs/jquery/1.9.0",
-            main: "jquery.min"
-        },
-        {
-            name: "underscore",
-            location: "//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3",
-            main: "underscore-min"
-        },
-        {
             name: "d3",
             location: "//d3js.org",
             main: "d3.v3.min"
@@ -212,14 +202,10 @@ define([
                 // scope of the plugin
                 this.$el.on("change", "input[name=storm" + this.app.paneNumber + "]", $.proxy(this.changeGroupSelect, this));
                 this.$el.on("change", "input[type=radio]", $.proxy(this.getParameters, this));
-                this.$el.on("change", ".region-select", $.proxy(this.changeRegion, this));
+                this.$el.on("change", "#select-region", $.proxy(this.changeRegion, this));
                 this.$el.on("click", ".stat", function(e) {self.changeScenarioClick(e);});
                 this.$el.on("click", ".draw-button", $.proxy(this.drawCustomRegion, this));
                 this.$el.on("change", ".coral-select-container input", $.proxy(this.toggleCoral, this));
-
-                this.$el.on("mouseenter", ".info-tooltip", function(e) {self.showTooltip(e);});
-                this.$el.on("mouseleave", ".info-tooltip", $.proxy(this.hideTooltip, this));
-                this.$el.on("mousemove", ".info-tooltip", function(e) {self.moveTooltip(e);});
 
                 this.$el.on("click", ".js-getSnapshot", $.proxy(this.printReport, this));
             },
@@ -271,7 +257,7 @@ define([
                             return feature.attributes.UNIT_ID;
                         });
                         // TODO Probably set to new custom select value
-                        self.$el.find(".region-select").val("custom");
+                        self.$el.find("#select-region").val("custom").trigger('chosen:updated');
                         self.changeRegion();
                     });
 
@@ -305,7 +291,7 @@ define([
                 this.$el.find("." + this.layer + ".stat").addClass("active");
 
                 // Restore state of region select
-                this.$el.find(".region-select").val(this.region);
+                this.$el.find("#select-region").val(this.region).trigger('chosen:updated');
 
                 // Restore state of coral reef checkbox
                 if (this.coralReefLayer.visible) {
@@ -313,6 +299,11 @@ define([
                 }
 
                 this.changeRegion();
+
+                this.$el.find('.info-tooltip').tooltip({
+                    tooltipClass: "plugin-tooltip",
+                    track: true,
+                });
 
             },
 
@@ -346,7 +337,7 @@ define([
             },
 
             getParameters: function () {
-                this.region = this.$el.find(".region-select").val();
+                this.region = this.$el.find("#select-region").val();
                 this.period = this.$el.find("input[name=storm" + this.app.paneNumber + "]:checked").val();
                 this.scenario = this.$el.find("input[name=climate-scenario" + this.app.paneNumber + "]:checked").val();
                 this.layer = this.$el.find(".stat.active").closest(".stat").data("layer");
@@ -438,7 +429,7 @@ define([
                     
                     // Reset to global data
                     this.region = "Quintana Roo";
-                    this.$el.find(".region-select").val(this.region);
+                    this.$el.find("#select-region").val(this.region).trigger('chosen:updated');
                     this.updateLayers();
 
                     this.map.graphics.clear();
@@ -464,9 +455,12 @@ define([
 
                 $(this.container).empty().append($el);
 
+                this.$el.find('#select-region').chosen({
+                    disable_search_threshold: 20,
+                    width: '175px'
+                });
 
-                console.log(this.$el.find('.i18n').localize());
-
+                this.$el.find('.i18n').localize();
             },
 
             getRegionSum: function(attribute, region) {
@@ -524,42 +518,6 @@ define([
                 $(this.legendContainer).show().html(html);
 
                 return html;
-            },
-
-            // Show graph tooltip on hover
-            showGraphTooltip: function(d, self) {
-                if (d.y < 10) {
-                    self.$el.find(".ncp-tooltip").html(d.y.toFixed(2)).css({width: "auto"}).show();
-                } else {
-                    self.$el.find(".ncp-tooltip").html(parseInt(d.y).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")).css({width: "auto"}).show();
-                }
-            },
-
-            // Track graph tooltip to mouse movement
-            moveGraphTooltip: function(d, el, self) {
-                var offset = this.$el.offset();
-                var x = d3.event.pageX - offset.left;
-                var y = d3.event.pageY - offset.top;
-                this.$el.find(".ncp-tooltip").css({left: x + 5, top: y});
-            },
-
-            // Show info tooltip on mouse hover
-            showTooltip: function(e) {
-                var text = $(e.currentTarget).data("tooltip");
-                this.$el.find(".ncp-tooltip").html(text).css({width: "240"}).show();
-            },
-
-            // Hide graph and info tooltip on mouseout
-            hideTooltip: function() {
-                this.$el.find(".ncp-tooltip").empty().hide();
-            },
-
-            // Track info tooltip to mouse movement
-            moveTooltip: function(e) {
-                var offset = this.$el.offset();
-                var x = e.pageX - offset.left;
-                var y = e.pageY - offset.top;
-                this.$el.find(".ncp-tooltip").css({left: x + 5, top: y});
             },
 
             // Render the D3 Chart
@@ -640,19 +598,10 @@ define([
                     .data(bardata)
                     .enter().append("rect")
                     .attr("opacity", 0)
-                    .attr("class", "bar")
+                    .attr("class", "bar info-tooltip")
                     .attr("x", function(d) { return self.chart.barx(d.x); })
                     .attr("width", 30)
-                    .attr("y", function(d) { return self.chart.y(d.y); })
-                    .on("mouseover", function(e) {
-                        self.showGraphTooltip(e, self);
-                    })
-                    .on("mousemove", function(d) {
-                        self.moveGraphTooltip(d, this, self);
-                    })
-                    .on("mouseout", function() {
-                        self.hideTooltip(self);
-                    });
+                    .attr("y", function(d) { return self.chart.y(d.y); });
 
                 this.updateChart();
 
@@ -717,10 +666,17 @@ define([
                     .transition().duration(1200).ease("sin-in-out")
                     .attr("opacity", 1)
                     .attr("width", this.chart.barx.rangeBand())
-                    .attr("class", function(d) {return "bar " + d.x;})
+                    .attr("class", function(d) {return "info-tooltip bar " + d.x;})
                     .attr("x", function(d) { return self.chart.barx(d.x); })
                     .attr("y", function(d) { return self.chart.y(d.y); })
-                    .attr("height", function(d) { return self.chart.position.height - 20 - self.chart.y(d.y); });
+                    .attr("height", function(d) { return self.chart.position.height - 20 - self.chart.y(d.y); })
+                    .attr('title', function(d) {
+                        if (d.y < 10) {
+                            return d.y.toFixed(2);
+                        } else {
+                            return parseInt(d.y).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                        }
+                    });
             },
 
             // Download the pdf report for the current region
