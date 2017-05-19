@@ -285,6 +285,7 @@ define([
 
                 // Restore storm period radios
                 this.$el.find("input[value=" + this.period + "]").prop('checked', true);
+                this.changeGroupSelect();
 
                 // restore state of people, capital, area selector
                 this.$el.find(".stat.active").removeClass("active");
