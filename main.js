@@ -407,7 +407,7 @@ define([
 
                 var extent = new esri.geometry.Extent(regionExtent[0],regionExtent[1],regionExtent[2],regionExtent[3]);
 
-                this.map.setExtent(extent);
+                this.map.setExtent(extent, true);
 
                 ga('send', 'event', {
                     eventCategory: 'NCP-MX',
