@@ -48,7 +48,7 @@ define([
             fullName: "Configure and control layers to be overlayed on the base map.",
 			infoGraphic: "plugins/natural_coastal_protection_mx/coastalprotection.jpg",
             resizable: false,
-            width: 425,
+            width: 435,
             showServiceLayersInLegend: true, // Disable the default legend item which doesn't pick up our custom class breaks
             allowIdentifyWhenActive: false,
             drawing: false,
@@ -81,7 +81,7 @@ define([
                 this.chart.position.margin = {
                     top: 30,
                     right: 30,
-                    left: 100,
+                    left: 115,
                     bottom: 30
                 };
                 this.chart.position.width = (this.width - 10)- this.chart.position.margin.left - this.chart.position.margin.right;
@@ -573,7 +573,7 @@ define([
                     .attr("transform", "rotate(-90)")
                     .attr("y", 0 - this.chart.position.margin.left + 5)
                     .attr("x", 0 - (this.chart.position.height - 10))
-                    .attr("width", this.chart.position.height - 20)
+                    .attr("width", this.chart.position.height)
                     .attr("text-anchor", "middle")
                     .text(i18next.t('People Protected (No.)'));
 
