@@ -21,8 +21,10 @@ define([
     "esri/Color",
     "esri/toolbars/draw",
     "esri/graphic",
+    "esri/geometry/jsonUtils",
     "esri/tasks/QueryTask",
     "esri/tasks/query",
+    "./State",
     "dojo/text!./template.html",
     "dojo/text!./data.json",
     "dojo/text!./country-config.json"
@@ -37,8 +39,10 @@ define([
               Color,
               Draw,
               Graphic,
+              geometryJsonUtils,
               QueryTask,
               Query,
+              State,
               templates,
               Data,
               CountryConfig
@@ -68,11 +72,14 @@ define([
                 bundle.toolbars.draw.finish = i18next.t("Double click to complete");
 
                 // Default Settings
-                this.region = "Quintana Roo";
-                this.period = "ANN";
-                this.layer = "people";
-                this.scenario = "";
-                this.variable = "PF";
+                this.state = new State();
+                this.region = this.state.getRegion();
+                this.period = this.state.getPeriod();
+                this.layer = this.state.getLayer();
+                this.scenario = this.state.getScenario();
+                this.variable = this.state.getVariable();
+                this.customGeom = this.state.getCustomGeom();
+                this.coralVisibility = this.state.getCoralVisibility();
 
                 this.bindEvents();
 
@@ -157,6 +164,29 @@ define([
                 };
             },
 
+            setState: function(data) {
+                this.state = new State(data);
+                this.region = data.region;
+                this.customGeom = data.customGeom;
+                this.period = data.period;
+                this.layer = data.layer;
+                this.variable = data.variable;
+                this.scenario = data.scenario;
+                this.coralVisibility = data.coralVisibility;
+            },
+
+            getState: function() {
+                return {
+                    region: this.state.getRegion(),
+                    customGeom: this.state.getCustomGeom(),
+                    period: this.state.getPeriod(),
+                    layer: this.state.getLayer(),
+                    variable: this.state.getVariable(),
+                    scenario: this.state.getScenario(),
+                    coralVisibility: this.state.getCoralVisibility()
+                };
+            },
+
             layerStringBuilder: function() {
                 var period = "",
                     scenario = "",
@@ -202,7 +232,7 @@ define([
                 // scope of the plugin
                 this.$el.on("change", "input[name=storm" + this.app.paneNumber + "]", $.proxy(this.changeGroupSelect, this));
                 this.$el.on("change", "input[type=radio]", $.proxy(this.getParameters, this));
-                this.$el.on("change", "#select-region", $.proxy(this.changeRegion, this));
+                this.$el.on("change", "#ncpmx-select-region", $.proxy(this.changeRegion, this));
                 this.$el.on("click", ".stat", function(e) {self.changeScenarioClick(e);});
                 this.$el.on("click", ".draw-button", $.proxy(this.drawCustomRegion, this));
                 this.$el.on("change", ".coral-select-container input", $.proxy(this.toggleCoral, this));
@@ -224,7 +254,7 @@ define([
                 var layerDrawingOption = new LayerDrawingOptions();
 
                 this.coralReefLayer = new ArcGISDynamicMapServiceLayer("http://services.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer", {
-                    visible: false,
+                    visible: this.state.getCoralVisibility(),
                     opacity: 0.5
                 });
                 this.coralReefLayer.setVisibleLayers([32]);
@@ -239,28 +269,8 @@ define([
 
                 this.draw = new Draw(this.map);
                 this.draw.on("draw-complete", function(evt) {
-                    self.drawing = false;
-                    self.$el.find(".draw-button").removeClass("active");
-                    self.$el.find(".region-select-container .styled-select").removeClass("disabled");
-                    self.draw.deactivate();
-                    
-                    var symbol = new SimpleLineSymbol();
-                    var graphic = new Graphic(evt.geometry, symbol);
-                    var query = new Query();
-                    query.spatialRelationship = Query.SPATIAL_REL_INTERSECTS;
-                    query.returnGeometry = false;
-                    query.outFields = ["UNIT_ID"];
-                    query.geometry = evt.geometry;
-                    self.map.graphics.add(graphic);
-                    self.coastalProtectionFeatureLayer.queryFeatures(query, function(featureset) {
-                        self.selectedUnits = _(featureset.features).map(function(feature) {
-                            return feature.attributes.UNIT_ID;
-                        });
-                        // TODO Probably set to new custom select value
-                        self.$el.find("#select-region").val("custom").trigger('chosen:updated');
-                        self.changeRegion();
-                    });
-
+                    self.state = self.state.setCustomGeom(evt.geometry.toJson());
+                    self.drawCustom(evt.geometry);
                 });
 
             },
@@ -277,22 +287,26 @@ define([
                 // default variables
                 if (!this.coastalProtectionLayer || !this.coastalProtectionLayer.visible) {
                     this.firstLoad();
-                    this.region = "Quintana Roo";
-                    this.period = "ANN";
-                    this.layer = "people";
-                    this.variable = "PF";
                 }
 
                 // Restore storm period radios
                 this.$el.find("input[value=" + this.period + "]").prop('checked', true);
                 this.changeGroupSelect();
+                if (this.period === "ANN") {
+                    this.$el.find(".select-ann input[value=" + this.scenario + "]").prop('checked', true);
+                } else {
+                    this.$el.find(".select-100 input[value=" + this.scenario + "]").prop('checked', true);
+                }
 
                 // restore state of people, capital, area selector
                 this.$el.find(".stat.active").removeClass("active");
                 this.$el.find("." + this.layer + ".stat").addClass("active");
 
                 // Restore state of region select
-                this.$el.find("#select-region").val(this.region).trigger('chosen:updated');
+                this.$el.find("#ncpmx-select-region").val(this.region).trigger('chosen:updated');
+                if (this.region === "custom") {
+                    this.drawCustom(geometryJsonUtils.fromJson(this.customGeom));
+                }
 
                 // Restore state of coral reef checkbox
                 if (this.coralReefLayer.visible) {
@@ -308,12 +322,39 @@ define([
 
             },
 
+            drawCustom: function(geom) {
+                var self = this;
+                this.drawing = false;
+                this.$el.find(".draw-button").removeClass("active");
+                this.$el.find(".region-select-container .styled-select").removeClass("disabled");
+                this.draw.deactivate();
+                
+                var symbol = new SimpleLineSymbol();
+                var graphic = new Graphic(geom, symbol);
+                var query = new Query();
+                query.spatialRelationship = Query.SPATIAL_REL_INTERSECTS;
+                query.returnGeometry = false;
+                query.outFields = ["UNIT_ID"];
+                query.geometry = geom;
+                this.map.graphics.add(graphic);
+                this.coastalProtectionFeatureLayer.queryFeatures(query, function(featureset) {
+                    self.selectedUnits = _(featureset.features).map(function(feature) {
+                        return feature.attributes.UNIT_ID;
+                    });
+                    // TODO Probably set to new custom select value
+                    self.$el.find("#ncpmx-select-region").val("custom").trigger('chosen:updated');
+                    self.changeRegion();
+                });
+            },
+
             // Turn the coral reef layer on and off
             toggleCoral: function() {
                 if ($(".coral-select-container input").is(":checked")) {
                     this.coralReefLayer.setVisibility(true);
+                    this.state = this.state.setCoralVisibility(true);
                 } else {
                     this.coralReefLayer.setVisibility();
+                    this.state = this.state.setCoralVisibility(false);
                 }
             },
 
@@ -332,13 +373,15 @@ define([
                 } else {
                     layerDefs[layerIdx] = "REGION='" + this.region + "'";
                 }
+
+                this.state = this.state.setRegion(this.region);
                 
                 this.coastalProtectionLayer.setLayerDefinitions(layerDefs);
                 this.coastalProtectionLayer.setVisibleLayers([this.layerStringBuilder()]);
             },
 
             getParameters: function () {
-                this.region = this.$el.find("#select-region").val();
+                this.region = this.$el.find("#ncpmx-select-region").val();
                 this.period = this.$el.find("input[name=storm" + this.app.paneNumber + "]:checked").val();
                 this.scenario = this.$el.find("input[name=climate-scenario" + this.app.paneNumber + "]:checked").val();
                 this.layer = this.$el.find(".stat.active").closest(".stat").data("layer");
@@ -350,6 +393,12 @@ define([
                 } else if (this.layer === "area") {
                     this.variable = "HOTEL";
                 }
+
+                this.state = this.state.setRegion(this.region);
+                this.state = this.state.setPeriod(this.period);
+                this.state = this.state.setLayer(this.layer);
+                this.state = this.state.setVariable(this.variable);
+                this.state = this.state.setScenario(this.scenario);
 
                 this.updateStats();
                 this.updateChart();
@@ -430,7 +479,8 @@ define([
                     
                     // Reset to global data
                     this.region = "Quintana Roo";
-                    this.$el.find("#select-region").val(this.region).trigger('chosen:updated');
+                    this.state = this.state.setRegion(this.region);
+                    this.$el.find("#ncpmx-select-region").val(this.region).trigger('chosen:updated');
                     this.updateLayers();
 
                     this.map.graphics.clear();
@@ -456,7 +506,7 @@ define([
 
                 $(this.container).empty().append($el);
 
-                this.$el.find('#select-region').chosen({
+                this.$el.find('#ncpmx-select-region').chosen({
                     disable_search_threshold: 20,
                     width: '175px'
                 });
