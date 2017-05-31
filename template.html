@@ -7,8 +7,8 @@
 		-webkit-user-select: none;
 		-ms-user-select: none;
 		user-select:none;
-		line-height: 16px;
-		font-size: 14px;
+		line-height: 20px;
+		font-size: 13px;
 	}
 
 	/* Checkboxes */
@@ -86,6 +86,7 @@
 	  width: 14px;
 	  background-color: #fff;
 	  z-index: 5;
+	  cursor: pointer;
 	  transition: border .25s linear;
 	  -webkit-transition: border .25s linear;
 	}
@@ -157,8 +158,9 @@
 
 	.mar-plugin .title {
 		margin-top: 0;
-   		padding-top: 20px;
+   		padding-top: 11px;
 	    text-align: center;
+	    font-size: 14px;
 	}
 
 	.mar-plugin .main-message {
@@ -182,7 +184,7 @@
 	.mar-plugin .region-select-containers {
 		position: relative;
 		display: block;
-		height: 63px;
+		height: 68px;
 		border-top: 2px solid #e3e5e3;
 		border-bottom: 2px solid #e3e5e3;
 	}
@@ -206,19 +208,23 @@
 	    float: left;
 	    padding: 5px 10px;
 	    font-size: 12px;
+	    height: 100%;
+    	padding-top: 17px;
 	}
 
 	.mar-plugin .draw-button {
+		display: inline-block;
 	    width: 24px;
 	    height: 30px;
-	    margin-top: 4px;
-	    background: url("plugins/natural_coastal_protection/pointer.svg") center no-repeat;
+	    margin-right: 6px;
+	    background: url("plugins/natural_coastal_protection_mx/pointer.svg") center no-repeat;
 	    border: 1px solid gray;
 	    cursor: pointer;
+	    vertical-align: middle;
 	}
 
 	.mar-plugin .draw-button.active {
-		background: url("plugins/natural_coastal_protection/pointer-blue.svg") center no-repeat;
+		background: url("plugins/natural_coastal_protection_mx/pointer-blue.svg") center no-repeat;
 	}
 
 	.mar-plugin .info-tooltip {
@@ -284,18 +290,11 @@
 	}
 
 	.mar-plugin .download-summary {
-		background: #fff;
 	    color: #3f9bd9;
-	    border: 2px solid #3f9bd9;
-	    box-shadow: none;
-	    float: right;
+	    float: left;
 	    cursor: pointer;
-	    border-radius: 4px;
-	    padding: 4px 8px;
-	    margin-right: 10px;
-	    text-align: center;
-	    box-shadow: 2px 2px 5px 1px rgba(34,100,145, 0.2);
-	    transition: box-shadow 0.2s;
+	    text-align: left;
+	    padding-left: 4px;
     }
 
     .mar-plugin .download-summary::after {
@@ -499,7 +498,7 @@
 
 	<div class="mar-plugin">
 		<div class="top-group clearfix">
-		    <h3 class="title i18n" data-i18n="Flood Protection Provided by Coral Reefs">Flood Protection Provided by Coral Reefs</h3>
+		    <h3 class="title i18n" data-i18n="[html]Flood Protection<br>Provided by Coral Reefs">Flood Protection<br>Provided by Coral Reefs</h3>
 		    <div class="main-message i18n" data-i18n="Estimates of the benefits provided by reefs in flood protection annually and from catastrophic storms">
 		    	Estimates of the benefits provided by reefs in flood protection annually and from catastrophic storms
 		    </div>
@@ -521,8 +520,8 @@
 					</div>
 		    	</div>
 		    	<div class="draw-custom-container">
-		    		<span class="i18n" data-i18n="Draw a region">Draw a region</span>
 		    		<div class="draw-button"></div>
+		    		<span class="i18n" data-i18n="Draw a region">Draw a region</span>
 		    	</div>
 		    </div>
 
