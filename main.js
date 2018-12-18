@@ -253,15 +253,15 @@ define([
                 var layerDrawingOptions = [];
                 var layerDrawingOption = new LayerDrawingOptions();
 
-                this.coralReefLayer = new ArcGISDynamicMapServiceLayer("http://services.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer", {
+                this.coralReefLayer = new ArcGISDynamicMapServiceLayer("https://services2.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer", {
                     visible: this.state.getCoralVisibility(),
                     opacity: 0.5
                 });
                 this.coralReefLayer.setVisibleLayers([32]);
 
-                this.coastalProtectionLayer = new ArcGISDynamicMapServiceLayer("http://services.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer", {});
+                this.coastalProtectionLayer = new ArcGISDynamicMapServiceLayer("https://services2.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer", {});
                 this.coastalProtectionLayer.setVisibleLayers([0]);
-                this.coastalProtectionFeatureLayer = new FeatureLayer("http://services.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer/3");
+                this.coastalProtectionFeatureLayer = new FeatureLayer("https://services2.coastalresilience.org/arcgis/rest/services/OceanWealth/Natural_Coastal_Protection/MapServer/3");
 
                 this.coastalProtectionLayer.setLayerDrawingOptions(layerDrawingOptions);
                 this.map.addLayer(this.coastalProtectionLayer);
